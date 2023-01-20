@@ -49,18 +49,29 @@ clear
 
 % bodies = [base, link1, link2, ee];
 
-% Prepare properties in workspace to be fed to simulink model
+% Prepare properties in workspace t                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     o be fed to simulink model
 
-n=7; %number of joints in the manipulator
+n=2; %number of joints in the manipulator
 
-rho=transpose([0 2.5 2.5; 0 2.5 2.5; 0 2.5 2.5;... % shoulder ball joint
-            0 2.5 7; ... %elbow revolute joint
-            0 2.5 11.5; 0 2.5 11.5; 0 2.5 11.5;] ... %wrist ball joint
+% Initiate Iota the inclusion map of the base
+iota0=[1 0 0; 0 1 0;zeros(3,3);0 0 1];
+
+% rho=transpose([0 2.5 2.5; 0 2.5 2.5; 0 2.5 2.5;... % shoulder ball joint
+%             0 2.5 7; ... %elbow revolute joint
+%             0 2.5 11.5; 0 2.5 11.5; 0 2.5 11.5;] ... %wrist ball joint
+%             ); %m %position of joints in initial configuration
+% w=transpose([1 0 0; 0 1 0; 0 0 1; ... % shoulder ball joint
+%             1 0 0;... %elbow 
+%             1 0 0; 0 1 0; 0 0 1; ... %wrist joint
+%             ]); %vector of rotation of each joint in inertial frame in initial pose
+
+rho=transpose([0 0 2.5; ... % shoulder ball joint
+            0 0 7] ... %elbow revolute joint
             ); %m %position of joints in initial configuration
-w=transpose([1 0 0; 0 1 0; 0 0 1; ... % shoulder ball joint
-            1 0 0;... %elbow 
-            1 0 0; 0 1 0; 0 0 1; ... %wrist joint
+w=transpose([1 0 0; ... % shoulder ball joint
+            0 1 0;... %elbow 
             ]); %vector of rotation of each joint in inertial frame in initial pose
+
 
 % form the overall twist matrix
 Xi_m_matrix=zeros(6*n,n);
@@ -83,15 +94,21 @@ for i=1:n
     g_cm(1:4,1:4,i)=[eye(3) zeros(3,1); 0 0 0 1];
 end
 
+% Set the Adjoint of initial poses of CoM of bodies in joint frames
+for i=1:n
+    Ad_gm_inv(:,:,i)=inv(Adjoint(g_cm(:,:,i)));
+end
+
 %Xi_m=0;
 mu=zeros(6,1)';
 mu_t=zeros(6,1)';
 
 m0=100;%kg
-mm=[2 2 0.5]; % link1, link2, wrist masses
+mm=[2 2]; % link1, link2, wrist masses
 %temp
+I0=eye(3)*416.667; %for cube with density 0.8
 for i=1:n
-    Im(1:3,1:3,i)=eye(3);
+    Im(1:3,1:3,i)=[3.37667 0 0;0 0.00333333 0; 0 0 3.37667];
 end
 
 
