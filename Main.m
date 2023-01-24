@@ -129,6 +129,13 @@ q_dot_m=[0;0];
 P=[0;0;0];
 V_I0=[0;0;0];
 
+%% Simulation
+
+sim('Dynamics.slx') % most basic way to simulate.
+
+
+%%
+
 % % form the collected diagonal mass matrix in joint frames
 % diagM=zeros(6*n+6);
 % for i=1:n+1
