@@ -135,6 +135,10 @@ V_I0=[0;0;0];
 
 diag_M =diagonalize(M_frak0, M_frak);
 
+%% Import Functions into Simulink
+
+% Import_to_Simulink()
+
 %% Simulation
 
 % sim('Dynamics.slx') % most basic way to simulate.
