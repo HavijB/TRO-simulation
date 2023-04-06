@@ -114,7 +114,7 @@ for i=1:n
 end
 
 % calculate Inertia matrices in the joint frames
-[M_curly0,M_curly]=M_curly(m0,I0,mm,Im,Ad_gcm_inv);
+[M_curly0,M_curlym]=M_curly(m0,I0,mm,Im,Ad_gcm_inv);
 
 % ************** Initiate forces
 
@@ -127,13 +127,13 @@ f_e=[0;0;0;0;0;0];
 % ************** Initiate states
 
 q_m=[0;0];
-q_dot_m=[0;1];
+q_dot_m=[0;0];
 P=[0;0;0];
 V_I0=[0;0;0];
 
 % Form the math matrix diagonalized in the base frame
 
-[M_frak0,M_frak] =M_frak(M_curly0,M_curly,Ad_gbar_inv);
+[M_frak0,M_frak] =M_frak(M_curly0,M_curlym,Ad_gbar_inv);
 
 diag_M =diagonalize(M_frak0, M_frak);
 
@@ -404,3 +404,216 @@ diag_M =diagonalize(M_frak0, M_frak);
 % plot(tt(1:100),y(16,1:100))
 % legend \omega_1 \omega_2
 % 
+
+
+% Test and Validation
+
+M0_temp=sim('M0_initiate',0.01);
+M0=M0_temp.M0(:,:,1);
+
+%% C matrix verification in 2-link only
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for q_dot_m1=[0 5]
+            for q_dot_m2=[0 3]
+                q_m=[q_m1;q_m2];
+                q_dot_m=[q_dot_m1;q_dot_m2];
+                out=sim('test_Dynamics_internal_mass_C',0.01);
+                format long
+                qddot=out.qddot.data(:,1);
+                qddot_ref=out.qddot_ref.data(1,:);
+%                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                table(q_m1,q_m2,q_dot_m1,q_dot_m2,squeeze(qddot(:,1)'),squeeze(qddot_ref(1,:)))
+            end
+        end
+    end
+end
+%%
+% C matrix verification in arm+base without coupling
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for q_dot_m1=[0 5]
+            for q_dot_m2=[0 3]
+                q_m=[q_m1;q_m2];
+                q_dot_m=[q_dot_m1;q_dot_m2];
+                out=sim('test_Dynamics_BaseandMandC_nocoupling',0.01);
+                format long
+                qddot=out.qddot.data(:,1);
+                qddot_ref=out.qddot_ref.data(1,:);
+%                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                table(q_m1,q_m2,q_dot_m1,q_dot_m2,qddot(:,1)',qddot_ref(1,:))
+            end
+        end
+    end
+end
+
+
+%% M matrix verification in coupled
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for fm1=[0 10]
+            for fm2=[0 7]
+                q_m=[q_m1;q_m2];
+                q_dot_m=[0;0];
+                f_m=[fm1;fm2];
+%                 V_I0=M0\P-A_connection*q_dot_m;
+                M_temp=sim('M0_initiate',0.01);
+                M0=M_temp.M0.data(:,:,1);
+                M0m=M_temp.M0m.data(:,:,1);
+                P=M0*V_I0+M0m*q_dot_m;
+                out=sim('test_Dynamics_coupled_MandC',0.01);
+                format long
+                qddot=out.qddot.data(:,1);
+                qddot_ref=out.qddot_ref.data(1,:);
+%                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                table(q_m1,q_m2,fm1,fm2,qddot(:,1)',qddot_ref(1,:))
+            end
+        end
+    end
+end
+%% Euler-Poincare verification
+q_m=[0;0];
+q_dot_m=[0;0];
+f_m=[0;0];
+% V_I0=M0\P-A_connection*q_dot_m;
+M_temp=sim('M0_initiate',0.01);
+M0=M_temp.M0.data(:,:,1);
+% M0m=M_temp.M0m.data(:,:,1);
+% M0m=M_temp.M0m.data(:,:,1);
+P=M0*V_I0;
+out=sim('test_Dynamics_EulerPoincare',0.01);
+format long
+qddot=out.qddot.data(:,1);
+qddot_ref=out.qddot_ref.data(1,:);
+% ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+table(q_m1,q_m2,q_dot_m1,q_dot_m2,qddot(:,1)',qddot_ref(1,:))
+
+
+%% M matrix verification in full
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for fm1=[0 10]
+            for fm2=[0 7]
+                q_m=[q_m1;q_m2];
+                q_dot_m=[0;0];
+                f_m=[fm1;fm2];
+                V_I0=[0;0;0];
+%                 V_I0=M0\P-A_connection*q_dot_m;
+                M_temp=sim('M0_initiate',0.01);
+                M0=M_temp.M0.data(:,:,1);
+                M0m=M_temp.M0m.data(:,:,1);
+                P=M0*V_I0+M0m*q_dot_m;
+                out=sim('test_Dynamics_coupled_full',0.01);
+                format long
+                qddot=out.qddot.data(:,1);
+                qddot_ref=out.qddot_ref.data(1,:);
+%                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                table(q_m1,q_m2,fm1,fm2,qddot(:,1)'-qddot_ref(1,:))
+            end
+        end
+    end
+end
+
+%% N matrix verification in full
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for V_I01=[0 0.2]
+            for V_I02=[0 0.1]
+                for V_I03=[0 0.05]
+                    q_m=[2;1];
+                    q_dot_m=[0;0];
+                    f_m=[0;0];
+                    V_I0=[V_I01;V_I02;V_I03];
+                    M_temp=sim('M0_initiate',0.01);
+                    M0=M_temp.M0.data(:,:,1);
+                    M0m=M_temp.M0m.data(:,:,1);
+  %                 V_I0=M0\P-M0\M0m*q_dot_m;
+                    P=M0*V_I0+M0m*q_dot_m;
+    
+                    out=sim('test_Dynamics_coupled_full',0.01);
+                    format long
+                    qddot=out.qddot.data(:,1);
+                    qddot_ref=out.qddot_ref.data(1,:);
+                    table(q_m1,q_m2,V_I01,V_I02, V_I03,qddot(:,1)',qddot_ref(1,:))
+                end
+            end
+        end
+    end
+end
+
+%% C matrix verification in full
+for q_m1=[0 0.2 0.5]
+    for q_m2=[0 0.4 0.9]
+        for q_dot_m1=[0 1 2]
+            for q_dot_m2=[0 0.5 1.5]
+                q_m=[q_m1;q_m2];
+                q_dot_m=[q_dot_m1;q_dot_m2];
+                f_m=[0;0];
+                M_temp=sim('M0_initiate',0.01);
+                M0=M_temp.M0.data(:,:,1);
+                M0m=M_temp.M0m.data(:,:,1);
+                P=[0;0;0];%M0*V_I0+M0m*q_dot_m;
+                V_I0=M0\P-M0m*q_dot_m;
+                out=sim('test_Dynamics_coupled_full',0.01);
+                format long
+                qddot=out.qddot.data(:,1);
+                qddot_ref=out.qddot_ref.data(1,:);
+%                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                table(q_m1,q_m2,q_dot_m1,q_dot_m2,qddot(:,1)',qddot_ref(1,:))
+            end
+        end
+    end
+end
+
+%% N matrix verification in full
+for q_m1=[0 2]
+    for q_m2=[0 1.5]
+        for V_I01=[0 0.7]
+            for V_I02=[0 0.3]
+                for V_I03=[0 0.5]
+                    q_m=[q_m1;q_m2];
+                    q_dot_m=[0;0];
+                    f_m=[0;0];
+%                     V_I0=M0\P-A_connection*q_dot_m;
+                    V_I0=[V_I01;V_I02;V_I03];
+                    M_temp=sim('M0_initiate',0.01);
+                    M0=M_temp.M0.data(:,:,1);
+                    M0m=M_temp.M0m.data(:,:,1);
+                    P=M0*V_I0+M0m*q_dot_m;
+                    out=sim('test_Dynamics_coupled_full',0.01);
+                    format long
+                    qddot=out.qddot.data(:,1);
+                    qddot_ref=out.qddot_ref.data(1,:);
+                    V=out.V.data(:,1);
+                    V_ref=out.V_ref.data(1,:);
+    %                 ['q=',num2str(q_m1),',',num2str(q_m2),' & ', 'q_dot=',num2str(q_dot_m1),',',num2str(q_dot_m2),' & ', 'q_ddot=',num2str(qddot(:,1)'),' & q_ddot_ref=',num2str(qddot_ref(1,:))]
+                    table(q_m1,q_m2,V_I01,V_I02,V_I03,qddot(:,1)'-qddot_ref(1,:),V'-V_ref)
+                end
+            end
+        end
+    end
+end
+
+%% test sample C
+ 
+q_m=[0.2;0.4];
+q_dot_m=[0.3;0.5];
+f_m=[0;0];
+M_temp=sim('M0_initiate',0.01);
+M0=M_temp.M0.data(:,:,1);
+M0m=M_temp.M0m.data(:,:,1);
+P=[0;0;0];%M0*V_I0+M0m*q_dot_m;
+V_I0=M0\P-M0\M0m*q_dot_m;
+
+%% test sample N
+
+q_m=[0.2;0.4];
+q_dot_m=[0;0];
+f_m=[0;0];
+V_I0=[0.1;0.2;0.3];
+M_temp=sim('M0_initiate',0.01);
+M0=M_temp.M0.data(:,:,1);
+M0m=M_temp.M0m.data(:,:,1);
+P=M0*V_I0+M0\M0m*q_dot_m;
+% V_I0=M0\P-M0\M0m*q_dot_m;
+
