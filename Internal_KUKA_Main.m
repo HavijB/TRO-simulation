@@ -1,4 +1,4 @@
-% ************************************************************************%
+% ****************                    ********************************************************%
 %                                                                         %
 %                   Relative output regulation of                         %
 %                   space manipulators on Lie groups                      %
@@ -8,7 +8,7 @@
 %                   Autonomous Space Robotics and Mechatronics Laboratory %
 % Supervised by:    Robin Chhabra,                                        %
 %                   Carleton University, Ottawa, Canada.                  %
-%                                                                         %
+%                                                                                               %
 % Initiated: 2022 August                                                  %
 %                                                                         %
 % Edited:                                                                 %
@@ -26,11 +26,13 @@ clear
 
 % ******************* Initiate Constants and Dimensions **************** %%
 
-% ***************************** Create Robot **************************** %
+% **************************** Create Robot 
 
-sc_size=1; %m % size of the spacecraft cube
+sc_size=0; %m % size of the spacecraft cube
 
-% **************************** get iiwa7 info
+%  Simulation
+
+% -------------------------------------------------- get iiwa7 info
 
 robot = importrobot('iiwa7.urdf');
 robot.DataFormat = 'column';
@@ -135,10 +137,9 @@ for i=2:n
 end
 
 % Set the initial poses of CoM of bodies in joint frames
-g_cm=zeros(4,4,n);
-g_cm0(1:4,1:4)=[R_bar_rel(:,:,1) rho(:,1); 0 0 0 1]; % ee
+g_cm(1:4,1:4,1)=[R_bar_rel(:,:,1) rho(:,1); 0 0 0 1]; % ee
 for i=2:n
-    g_cm(1:4,1:4,i-1)=[R_bar_rel(:,:,i) R(1:3,1:3,i-1)'*(rho(:,i)-rho(:,i-1)); 0 0 0 1];
+    g_cm(1:4,1:4,i)=[R_bar_rel(:,:,i) rho(:,i)-rho(:,i-1); 0 0 0 1];
 end
 
 g_cm(1:4,1:4,n)=[eye(3) [0; 0; -sc_size/2]; 0 0 0 1]; %spacecraft
@@ -184,7 +185,7 @@ end
 
 
 % calculate Inertia matrices in the joint frames
-[M_curly0,M_curlym]=M_curly_ee(m0,I0,mm,Im,Ad_gcm_inv);
+[M_curly0,M_curlym]=M_curly(m0,I0,mm,Im,Ad_gcm_inv);
 
 % ************** Initiate forces
 
@@ -219,18 +220,17 @@ I0(1:3,1:3)=temp(4:6,4:6);
 temp=Ad_gcm_inv(:,:,n)'*[mm(n)*eye(3) zeros(3); zeros(3) Im(1:3,1:3,n)]*Ad_gcm_inv(:,:,n);
 Im(1:3,1:3,n)=temp(4:6,4:6);
 %arm
-for i=1:n
-    Im(1:3,1:3,i)=M_curlym(i,4:6,4:6);
-%     Im(1:3,1:3,n-i+1)=inv(R_bar_rel(:,:,n-i+1))'*[robot.Bodies{1,i}.Inertia(1) robot.Bodies{1,i}.Inertia(6) robot.Bodies{1,i}.Inertia(5); ...
-%     robot.Bodies{1,i}.Inertia(6) robot.Bodies{1,i}.Inertia(2) robot.Bodies{1,i}.Inertia(4); ...
-%     robot.Bodies{1,i}.Inertia(5) robot.Bodies{1,i}.Inertia(4) robot.Bodies{1,i}.Inertia(3)]*inv(R_bar_rel(:,:,i-1));
+for i=2:n
+    Im(1:3,1:3,n-i+1)=inv(R_bar_rel(:,:,n-i+1))'*[robot.Bodies{1,i}.Inertia(1) robot.Bodies{1,i}.Inertia(6) robot.Bodies{1,i}.Inertia(5); ...
+    robot.Bodies{1,i}.Inertia(6) robot.Bodies{1,i}.Inertia(2) robot.Bodies{1,i}.Inertia(4); ...
+    robot.Bodies{1,i}.Inertia(5) robot.Bodies{1,i}.Inertia(4) robot.Bodies{1,i}.Inertia(3)]*inv(R_bar_rel(:,:,i-1));
 end
 
 
 
 %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! UPDATE
-% rho_0t=[0.25;0.25;0.26]; %m
-% V_0t=[0;0;0];%[-0.0005;-0.0005;0];
+rho_0t=[0.25;0.25;0.26]; %m
+V_0t=[0;0;0];%[-0.0005;-0.0005;0];
 %!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 mu=zeros(6,1);
@@ -276,10 +276,10 @@ mu_t=M_t*[V_0t;w_t];
 
 % *************************** Set Controller parameters
 
-K_p=50*[0.1 0 0 0 0 0;0 0.1 0 0 0 0; 0 0 0.1 0 0 0; 0 0 0 0.01 0 0;
+K_p=200*[0.1 0 0 0 0 0;0 0.1 0 0 0 0; 0 0 0.1 0 0 0; 0 0 0 0.01 0 0;
     0 0 0 0 0.01 0;0 0 0 0 0 0.01];%0.05*eye(6);
-K_d=50*[0.7*eye(3) zeros(3);zeros(3) 0.5*eye(3)];
-K_i=50*[0.01*eye(3) zeros(3);zeros(3) 0.001*eye(3)];
+K_d=200*[0.7*eye(3) zeros(3);zeros(3) 0.5*eye(3)];
+K_i=200*[0.01*eye(3) zeros(3);zeros(3) 0.001*eye(3)];
 
 
 %
